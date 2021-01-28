@@ -335,7 +335,7 @@ function parseDepsFile(data) {
         };
 
         // see if this matches our filter
-        let filteredOut = true;
+        let filteredOut = filterDirs.length === 0 ? false : true;
         for (const f of filterDirs) {
             if (k.indexOf(f) !== -1)
                 filteredOut = false;

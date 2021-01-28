@@ -1,0 +1,16 @@
+{
+  "name": "gclient-resolver",
+  "version": "1.0.0",
+  "description": "unfucks gclient",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@jhanssen/options": "^1.0.29",
+    "acorn": "^8.0.5",
+    "estraverse": "^5.2.0"
+  }
+}

@@ -13,6 +13,9 @@ const gclientFiles = gclientFile.split(";");
 const filterDir = option("filter-dir", "third_party");
 const filterDirs = filterDir.split(";");
 
+const noGitHub = option("no-github", "");
+const noGitHubs = noGitHub.split(";");
+
 function skipWhiteSpace(idx, skip, str) {
     if (idx === -1 || idx >= str.length)
         return -1;
@@ -391,12 +394,21 @@ function parseDepsFile(data) {
     const vars = parseDepsVars(data);
     // console.log("got vars", vars);
     const deps = parseDepsDeps(data, vars);
+    // console.log("got deps", deps);
     // replace silly chromium external urls with github urls
     for (const k of Object.keys(deps)) {
         let v = deps[k];
         let idx = v.indexOf("chromium.googlesource.com/external/github.com");
         if (idx !== -1) {
-            v = v.replace("chromium.googlesource.com/external/github.com", "github.com");
+            // check if we want to prevent this replacement
+            let shouldReplace = true;
+            for (const ng of noGitHubs) {
+                if (v.indexOf(ng) !== -1)
+                    shouldReplace = false;
+            }
+            if (shouldReplace) {
+                v = v.replace("chromium.googlesource.com/external/github.com", "github.com");
+            }
         }
         // split url and sha
         idx = v.lastIndexOf("@");

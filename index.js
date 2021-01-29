@@ -170,6 +170,30 @@ function parseGClientFile(data) {
     throw new Error("Unreachable (parseGClientFile)");
 }
 
+function parseObject(obj) {
+    const ret = {};
+    if (obj.type !== "ObjectExpression")
+        throw new Error("Object not an ObjectExpression: " + obj.type);
+
+    for (const p of obj.properties) {
+        if (p.type !== "Property")
+            throw new Error("Object property not a Property: " + p.type);
+        if (p.key.type === "Literal") {
+            // we only care about url here (I think)
+            if (p.key.value === "url") {
+                if (p.value.type === "Literal") {
+                    ret[p.key.value] = p.value.value;
+                } else {
+                    throw new Error("Unknown prop value type\n" + JSON.stringify(p, null, 4));
+                }
+            }
+        } else {
+            throw new Error("Unknown prop key type\n" + JSON.stringify(p, null, 4));
+        }
+    }
+    return ret;
+}
+
 function parseDepsVars(data) {
     let vars = skipWhiteSpace(data.indexOf("vars"), 4, data);
     if (vars === -1 || data[vars] !== '=') {
@@ -198,10 +222,25 @@ function parseDepsVars(data) {
     try {
         const varret = {};
         for (const d of depvars.properties) {
-            if (d.key.type === "Literal" && d.value.type === "Literal") {
-                varret[d.key.value] = d.value.value;
+            if (d.key.type === "Literal") {
+                switch (d.value.type) {
+                case "Literal":
+                    varret[d.key.value] = d.value.value;
+                    break;
+                case "Identifier":
+                    // skip
+                    break;
+                case "ObjectExpression":
+                    const nobj = parseObject(d.value);
+                    if ("url" in nobj) {
+                        varret[d.key.value] = nobj.url;
+                    }
+                    break;
+                default:
+                    throw new Error("Unknown value type\n" + JSON.stringify(d, null, 4));
+                }
             } else {
-                throw new Error("Unknown key/value type\n" + JSON.stringify(d, null, 4));
+                throw new Error("Unknown key type\n" + JSON.stringify(d, null, 4));
             }
         }
         return varret;
@@ -299,12 +338,47 @@ function parseDepsDeps(data, vars) {
     try {
         const depret = {};
         for (const d of depdeps.properties) {
-            if (d.key.type === "Literal" && d.value.type === "Literal") {
-                depret[d.key.value] = d.value.value;
+            if (d.key.type === "Literal") {
+                switch (d.value.type) {
+                case "Literal":
+                    depret[d.key.value] = d.value.value;
+                    break;
+                case "Identifier":
+                    // skip
+                    break;
+                case "ObjectExpression":
+                    const nobj = parseObject(d.value);
+                    if ("url" in nobj) {
+                        depret[d.key.value] = nobj.url;
+                    }
+                    break;
+                default:
+                    throw new Error("Unknown value type\n" + JSON.stringify(d, null, 4));
+                }
             } else {
-                throw new Error("Unknown key/value type\n" + JSON.stringify(d, null, 4));
+                throw new Error("Unknown key type\n" + JSON.stringify(d, null, 4));
             }
         }
+
+        // replace in-line vars
+        for (const k of Object.keys(depret)) {
+            let v = depret[k];
+            let n = v.indexOf("{");
+            while (n !== -1) {
+                const nn = findMatching(n, v);
+                if (nn !== -1) {
+                    const vr = v.substr(n + 1, nn - n - 1);
+                    if (vr in vars) {
+                        v = v.replace(v.substr(n, nn - n + 1), vars[vr]);
+                    }
+                    n = v.indexOf("{", n);
+                } else {
+                    n = -1;
+                }
+            }
+            depret[k] = v;
+        }
+
         return depret;
     } catch (e) {
         throw e;

@@ -373,8 +373,10 @@ function parseDepsDeps(data, vars) {
                     const vr = v.substr(n + 1, nn - n - 1);
                     if (vr in vars) {
                         v = v.replace(v.substr(n, nn - n + 1), vars[vr]);
+                        n = v.indexOf("{", n);
+                    } else {
+                        n = v.indexOf("{", nn + 1);
                     }
-                    n = v.indexOf("{", n);
                 } else {
                     n = -1;
                 }
